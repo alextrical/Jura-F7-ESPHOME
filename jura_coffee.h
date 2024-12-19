@@ -1,130 +1,184 @@
 #include "esphome.h"
 
+// Optimized JuraCoffee class for ESPHome on a Wemos D1 microcontroller
 class JuraCoffee : public PollingComponent, public UARTDevice {
- Sensor *xsensor1 {nullptr};
- Sensor *xsensor2 {nullptr};
- Sensor *xsensor3 {nullptr};
- Sensor *xsensor4 {nullptr};
- Sensor *xsensor5 {nullptr};
- TextSensor *xsensor6 {nullptr};
- TextSensor *xsensor7 {nullptr};
+ private:
+  // Use constexpr for fixed sizes to minimize memory overhead
+  static constexpr size_t NUM_SENSORS = 9;
+  static constexpr size_t NUM_TEXT_SENSORS = 2;
+
+  // Use fixed-size arrays instead of dynamic arrays
+  Sensor *sensors[NUM_SENSORS];
+  TextSensor *text_sensors[NUM_TEXT_SENSORS];
+
+  // Use smaller data types where possible
+  uint32_t counts[NUM_SENSORS]; // Coffee counters
+  std::string tray_status, tank_status; // Machine status
+
+  // Commands stored as regular constants
+  const char *CMD_EEPROM = "RT:0000";
+  const char *CMD_IC = "IC:";
 
  public:
-  JuraCoffee(UARTComponent *parent, Sensor *sensor1, Sensor *sensor2, Sensor *sensor3, Sensor *sensor4, Sensor *sensor5, TextSensor *sensor6, TextSensor *sensor7) : UARTDevice(parent) , xsensor1(sensor1) , xsensor2(sensor2) , xsensor3(sensor3) , xsensor4(sensor4) , xsensor5(sensor5) , xsensor6(sensor6) , xsensor7(sensor7) {}
+  // Constructor initializes sensor and text sensor pointers
+  JuraCoffee(UARTComponent *parent, 
+             Sensor *sensor1, Sensor *sensor2, Sensor *sensor3, Sensor *sensor4, Sensor *sensor5, 
+             Sensor *sensor6, Sensor *sensor7, Sensor *sensor8, Sensor *sensor9, 
+             TextSensor *text_sensor1, TextSensor *text_sensor2)
+      : UARTDevice(parent) {
+    sensors[0] = sensor1;
+    sensors[1] = sensor2;
+    sensors[2] = sensor3;
+    sensors[3] = sensor4;
+    sensors[4] = sensor5;
+    sensors[5] = sensor6;
+    sensors[6] = sensor7;
+    sensors[7] = sensor8;
+    sensors[8] = sensor9;
 
-  long num_single_espresso, num_double_espresso, num_coffee, num_double_coffee, num_clean;
-  std::string tray_status, tank_status;
-
-  // Jura communication function taken in entirety from cmd2jura.ino, found at https://github.com/hn/jura-coffee-machine
-  String cmd2jura(String outbytes) {
-    String inbytes;
-    int w = 0;
-
-    while (available()) {
-      read();
-    }
-
-    outbytes += "\r\n";
-    for (int i = 0; i < outbytes.length(); i++) {
-      for (int s = 0; s < 8; s += 2) {
-        char rawbyte = 255;
-        bitWrite(rawbyte, 2, bitRead(outbytes.charAt(i), s + 0));
-        bitWrite(rawbyte, 5, bitRead(outbytes.charAt(i), s + 1));
-        write(rawbyte);
-      }
-      delay(8);
-    }
-
-    int s = 0;
-    char inbyte;
-    while (!inbytes.endsWith("\r\n")) {
-      if (available()) {
-        byte rawbyte = read();
-        bitWrite(inbyte, s + 0, bitRead(rawbyte, 2));
-        bitWrite(inbyte, s + 1, bitRead(rawbyte, 5));
-        if ((s += 2) >= 8) {
-          s = 0;
-          inbytes += inbyte;
-        }
-      } else {
-        delay(10);
-      }
-      if (w++ > 500) {
-        return "";
-      }
-    }
-
-    return inbytes.substring(0, inbytes.length() - 2);
+    text_sensors[0] = text_sensor1;
+    text_sensors[1] = text_sensor2;
   }
 
   void setup() override {
-    this->set_update_interval(60000); // 600000 = 10 minutes // Now 60 seconds
-  }
-
-  void loop() override {
+    // Set a reasonable update interval 
+    this->set_update_interval(60000); // 300,000 ms = 5 minutes
   }
 
   void update() override {
-    String result, hexString, substring;
-    byte hex_to_byte;
-    int trayBit, tankBit;
-    // For Testing
-     int read_bit0,read_bit1,read_bit2,read_bit3,read_bit4,read_bit5,read_bit6,read_bit7;
+    // Fetch and process EEPROM data
+    String eeprom_data = fetchData(CMD_EEPROM);
+    if (!processEEPROMData(eeprom_data)) {
+      ESP_LOGE("main", "Failed to process EEPROM data.");
+      return;
+    }
 
-    // Fetch our line of EEPROM
-    result = cmd2jura("RT:0000");
+    // Fetch and process IC data
+    String ic_data = fetchData(CMD_IC);
+    if (!processICData(ic_data)) {
+      ESP_LOGE("main", "Failed to process IC data.");
+      return;
+    }
 
-    // Get Single Espressos made
-    substring = result.substring(3,7);
-    num_single_espresso = strtol(substring.c_str(),NULL,16);
-
-    // Double Espressos made
-    substring = result.substring(7,11);
-    num_double_espresso = strtol(substring.c_str(),NULL,16);
-
-    // Coffees made
-    substring = result.substring(11,15);
-    num_coffee = strtol(substring.c_str(),NULL,16);
-
-    // Double Coffees made
-    substring = result.substring(15,19);
-    num_double_coffee = strtol(substring.c_str(),NULL,16);
-
-    // Cleanings done
-    substring = result.substring(35,39);
-    num_clean = strtol(substring.c_str(),NULL,16);
-
-    // Tray & water tank status
-    // Much gratitude to https://www.instructables.com/id/IoT-Enabled-Coffee-Machine/ for figuring out how these bits are stored
-    result = cmd2jura("IC:");
-    hexString = result.substring(3,5);
-    hex_to_byte = strtol(hexString.c_str(),NULL,16);
-    trayBit = bitRead(hex_to_byte, 4);
-    tankBit = bitRead(hex_to_byte, 5);
-    if (trayBit == 1) { tray_status = "Present"; } else { tray_status = "Missing"; }
-    if (tankBit == 1) { tank_status = "Fill Tank"; } else { tank_status = "OK"; }
-
-    // For Testing
-     read_bit0 = bitRead(hex_to_byte, 0);
-     read_bit1 = bitRead(hex_to_byte, 1);
-     read_bit2 = bitRead(hex_to_byte, 2);
-     read_bit3 = bitRead(hex_to_byte, 3);
-     read_bit4 = bitRead(hex_to_byte, 4);
-     read_bit5 = bitRead(hex_to_byte, 5);
-     read_bit6 = bitRead(hex_to_byte, 6);
-     read_bit7 = bitRead(hex_to_byte, 7);
-     ESP_LOGD("main", "Raw IC result: %s", result.c_str());
-     ESP_LOGD("main", "Substringed: %s", hexString.c_str());
-     ESP_LOGD("main", "Converted_To_Long: %li", hex_to_byte);
-     ESP_LOGD("main", "As Bits: %d%d%d%d%d%d%d%d", read_bit7,read_bit6,read_bit5,read_bit4,read_bit3,read_bit2,read_bit1,read_bit0);
-
-    if (xsensor1 != nullptr)   xsensor1->publish_state(num_single_espresso);
-    if (xsensor2 != nullptr)   xsensor2->publish_state(num_double_espresso);
-    if (xsensor3 != nullptr)   xsensor3->publish_state(num_coffee);
-    if (xsensor4 != nullptr)   xsensor4->publish_state(num_double_coffee);
-    if (xsensor5 != nullptr)   xsensor5->publish_state(num_clean);
-    if (xsensor6 != nullptr)   xsensor6->publish_state(tray_status);
-    if (xsensor7 != nullptr)   xsensor7->publish_state(tank_status);
-
+    // Publish data to sensors
+    publishSensorData();
   }
+
+ private:
+  // Function to fetch data from the coffee machine
+  String fetchData(const char *command) {
+    String result;
+    int timeout = 0;
+
+    // Clear UART buffer
+    while (available()) read();
+
+    // Send command
+    String formatted_command = String(command) + "\r\n";
+    for (char c : formatted_command) {
+      write(c);
+      delay(8); // Allow time for UART transmission
+    }
+
+    // Read response
+
+   // ESP_LOGD("main", "Sending command: %s", command);
+
+    String response;
+    while (!response.endsWith("\r\n")) {
+      if (available()) {
+        response += (char)read();
+      } else {
+        delay(10);
+      }
+      if (++timeout > 1500) {
+        ESP_LOGE("main", "Timeout waiting for response to command: %s", command);
+        return "";
+      }
+    }
+    return response.substring(0, response.length() - 2); // Remove \r\n
+  }
+
+  // Parse EEPROM data and extract coffee counters
+  bool processEEPROMData(const String &data) {
+    if (data.isEmpty()) return false;
+
+
+    //ESP_LOGD("main", "Raw EEPROM Data: %s", data.c_str());
+
+    // Parse known fields
+    counts[0] = parseHexSubstring(data, 3, 7);   // Single espresso
+    counts[1] = parseHexSubstring(data, 7, 11);  // Double espresso
+    counts[2] = parseHexSubstring(data, 11, 15); // Coffee
+    counts[3] = parseHexSubstring(data, 15, 19); // Double coffee
+    counts[4] = parseHexSubstring(data, 19, 23); // Single Ristretto
+    counts[5] = parseHexSubstring(data, 27, 31); // Double Ristretto
+    counts[6] = parseHexSubstring(data, 31, 35); // Brew-unit movements
+    counts[7] = parseHexSubstring(data, 35, 39); // Cleanings
+    counts[8] = parseHexSubstring(data, 59, 63); // Grounds from cleaning
+
+
+    // Parse and log unknown fields
+    uint32_t unknown_fields[7];
+    unknown_fields[0] = parseHexSubstring(data, 23, 27); // Unknown field
+    unknown_fields[1] = parseHexSubstring(data, 39, 43); // Unknown field
+    unknown_fields[2] = parseHexSubstring(data, 43, 47); // Unknown field
+    unknown_fields[3] = parseHexSubstring(data, 47, 51); // Unknown field
+    unknown_fields[4] = parseHexSubstring(data, 51, 55); // Unknown field
+    unknown_fields[5] = parseHexSubstring(data, 55, 59); // Unknown field
+    unknown_fields[6] = parseHexSubstring(data, 63, 67); // Unknown field
+
+    for (size_t i = 0; i < 7; ++i) {
+      ESP_LOGD("main", "Unknown Field %d: %u", i + 1, unknown_fields[i]);
+    }
+
+
+    return true;
+  }
+
+  // Parse IC data to determine tray and tank status
+  bool processICData(const String &data) {
+    if (data.isEmpty()) return false;
+
+    String hex_string = data.substring(3, 5);
+    if (!isHexadecimal(hex_string)) return false;
+
+    byte hex_to_byte = strtol(hex_string.c_str(), nullptr, 16);
+    tray_status = bitRead(hex_to_byte, 4) ? "Present" : "Missing";
+    tank_status = bitRead(hex_to_byte, 5) ? "Fill Tank" : "OK";
+
+    return true;
+  }
+
+  // Publish sensor data to ESPHome
+  void publishSensorData() {
+    for (size_t i = 0; i < NUM_SENSORS; ++i) {
+      if (sensors[i] != nullptr) {
+        sensors[i]->publish_state(counts[i]);
+      }
+    }
+
+    if (text_sensors[0] != nullptr) text_sensors[0]->publish_state(tray_status);
+    if (text_sensors[1] != nullptr) text_sensors[1]->publish_state(tank_status);
+  }
+
+  // Parse a hex substring safely
+  uint32_t parseHexSubstring(const String &data, int start, int end) {
+    if (start < 0 || end > data.length() || start >= end) return 0;
+
+    String substring = data.substring(start, end);
+    if (!isHexadecimal(substring)) return 0;
+
+    return strtol(substring.c_str(), nullptr, 16);
+  }
+
+  // Check if a string contains only hexadecimal characters
+  bool isHexadecimal(const String &str) {
+    for (char c : str) {
+      if (!isxdigit(c)) return false;
+    }
+    return true;
+  }
+
+  
 };
