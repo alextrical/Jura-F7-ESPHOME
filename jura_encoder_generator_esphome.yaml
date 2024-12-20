@@ -1,0 +1,153 @@
+## WARNING it is not working on the moment, string parsing errors but it is a good start for a new version
+
+esphome:
+  name: jura-encoder
+  platform: ESP8266
+  board: d1_mini
+  esp8266_restore_from_flash: True
+  name_add_mac_suffix: false
+
+substitutions:
+  uart_tx_pin: D1
+  uart_rx_pin: D2
+  uart_baud_rate: "9600"
+  devicename: jura-encoder
+
+# UART-configuratie
+uart:
+  tx_pin: ${uart_tx_pin}
+  rx_pin: ${uart_rx_pin}
+  baud_rate: ${uart_baud_rate}
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "${friendly_name} Fallback AP"
+    password: !secret fallback_ap_password
+
+logger:
+  level: DEBUG
+
+debug:
+  update_interval: 5s
+
+safe_mode:
+  num_attempts: 3
+
+# Webserver-configuratie
+web_server:
+  port: 80
+  ota: true
+
+# Globale variabele voor de tekstinvoer
+globals:
+  - id: encoded_string
+    type: string
+    initial_value: ""
+
+# Combineer de scripts in één sectie
+script:
+  - id: send_jura_command
+    then:
+      - lambda: |-
+          auto tojura = [](char c) -> std::vector<uint8_t> {
+            uint8_t z0 = 0xFF;
+            uint8_t z1 = 0xFF;
+            uint8_t z2 = 0xFF;
+            uint8_t z3 = 0xFF;
+
+            uint8_t bits = c;
+            if (bits & 0x80) z3 ^= (1 << 2);
+            if (bits & 0x40) z3 ^= (1 << 5);
+            if (bits & 0x20) z2 ^= (1 << 2);
+            if (bits & 0x10) z2 ^= (1 << 5);
+            if (bits & 0x08) z1 ^= (1 << 2);
+            if (bits & 0x04) z1 ^= (1 << 5);
+            if (bits & 0x02) z0 ^= (1 << 2);
+            if (bits & 0x01) z0 ^= (1 << 5);
+
+            return {z0, z1, z2, z3};
+          };
+
+          String to_send = id(encoded_string);  // Gebruik String in plaats van std::string
+          to_send += "\r\n";
+          for (char c : to_send) {
+            auto bytes = tojura(c);
+            for (auto byte : bytes) {
+              ESP_LOGD("Jura", "Sending byte: 0x%02X", byte);
+              uart_write(UART0, &byte, 1);  // Verzend byte
+            }
+            delay(8);
+          }
+          ESP_LOGD("Jura", "Command sent: %s", id(encoded_string).c_str());
+
+  - id: fetch_jura_data
+    then:
+      - lambda: |-
+          String result = "";
+          int timeout = 0;
+          
+          // Clear buffer
+          while (uart_available(UART0)) uart_read(UART0, nullptr, 0);  // Correcte manier om de buffer te legen
+          
+          // Verstuur het command
+          String formatted_command = id(encoded_string) + "\r\n";
+          for (char c : formatted_command) {
+            for (int bit = 0; bit < 8; bit += 2) {
+              char rawbyte = 255;
+              bitWrite(rawbyte, 2, bitRead(c, bit));
+              bitWrite(rawbyte, 5, bitRead(c, bit + 1));
+              uart_write(UART0, (const uint8_t *)&rawbyte, 1);  // Verzend de byte
+            }
+            delay(8);
+          }
+
+          // Wacht op een response
+          String inbytes;
+          char inbyte = 0;
+          int bit_index = 0;
+          while (!inbytes.endsWith("\r\n")) {
+            if (uart_available(UART0)) {
+              byte rawbyte;
+              uart_read(UART0, &rawbyte, 1);  // Correcte manier om te lezen
+              bitWrite(inbyte, bit_index, bitRead(rawbyte, 2));
+              bitWrite(inbyte, bit_index + 1, bitRead(rawbyte, 5));
+              if ((bit_index += 2) >= 8) {
+                inbytes += inbyte;
+                bit_index = 0;
+              }
+            } else {
+              delay(10);
+            }
+            if (++timeout > 1500) {
+              ESP_LOGE("main", "Timeout waiting for response to command: %s", id(encoded_string).c_str());
+              result = "";
+              break;
+            }
+          }
+          result = inbytes.substring(0, inbytes.length() - 2);  // Verwijder de \r\n
+          ESP_LOGD("main", "Received data: %s", result.c_str());
+          return result;
+
+# Webserver-toegang via tekstinvoer
+text_sensor:
+  - platform: template
+    name: "Jura Command Input"
+    id: text_input
+    update_interval: never
+
+sensor:
+  - platform: template
+    name: "Last Sent Jura Command"
+    id: last_sent_command
+    unit_of_measurement: ""
+
+switch:
+  - platform: template
+    name: "Send Jura Command"
+    turn_on_action:
+      - lambda: |-
+          id(encoded_string) = id(text_input).state.c_str();
+          id(last_sent_command).publish_state(id(encoded_string));
+      - script.execute: send_jura_command
