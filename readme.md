@@ -1,4 +1,5 @@
-Orginal sourcecode is based on: https://github.com/ryanalden/esphome-jura-component
+
+
 
 # Jura Impressa F-series UART decoder and ESPHOME controller
 
@@ -16,3 +17,7 @@ The following counters are now available:
 - Brew-unit movements
 - Cleanings
 - num of coffee grounds in tray
+
+## reference
+
+Orginal sourcecode is based on: https://github.com/ryanalden/esphome-jura-component / https://community.home-assistant.io/t/control-your-jura-coffee-machine/26604

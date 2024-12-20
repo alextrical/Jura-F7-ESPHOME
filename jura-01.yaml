@@ -50,10 +50,10 @@ captive_portal:
 
     
 logger:
-  level: DEBUG
+  level: WARN
  
 debug:
-  update_interval: 5s
+  update_interval: ${sampling_period}
 
 # ⬇ Enable Home Assistant API ⬇ 
 ota:
@@ -236,49 +236,29 @@ button:
     # web_server:
     #   sorting_group_id: sorting_group_jura_settings    
 
+
   - platform: template
     name: 'jura_menu'
     icon: "mdi:MicrosoftXboxControllerMenu"
-    entity_category: config
+    entity_category: config 
     id: jura_FA03
+    web_server:
+      sorting_group_id: sorting_group_jura_settings
     on_press:
-      - lambda: |-
-          auto commands = std::vector<std::vector<uint8_t>>{
-            {0xFB, 0xDF, 0xDB, 0xDF},
-            {0xDF, 0xDB, 0xDB, 0xDF},
-            {0xFB, 0xFB, 0xFF, 0xDB},
-            {0xDB, 0xDB, 0xFF, 0xDB},
-            {0xFF, 0xDB, 0xFF, 0xDB},
-            {0xDF, 0xFF, 0xDB, 0xDB},
-            {0xFB, 0xFB, 0xDB, 0xDB},
-          };
-          for (auto &command : commands) {
-            id(uart_bus).write_bytes(command.data(), command.size());
-            delay(8);
-          }
-
-  # - platform: template
-  #   name: 'jura_menu'
-  #   icon: "mdi:MicrosoftXboxControllerMenu"
-  #   entity_category: config 
-  #   id: jura_FA03
-  #   # web_server:
-  #   #   sorting_group_id: sorting_group_jura_settings        
-  #   on_press:
-  #   #turn_on_action:
-  #     - uart.write: [0xFB, 0xDF, 0xDB, 0xDF]  ## 'F'
-  #     - delay: 8ms
-  #     - uart.write: [0xDF, 0xDB, 0xDB, 0xDF]  ## 'A'
-  #     - delay: 8ms
-  #     - uart.write: [0xFB, 0xFB, 0xFF, 0xDB]  ## ':'
-  #     - delay: 8ms
-  #     - uart.write: [0xDB, 0xDB, 0xFF, 0xDB]  ## '0'
-  #     - delay: 8ms
-  #     - uart.write: [0xFF, 0xDB, 0xFF, 0xDB]  ## '3'
-  #     - delay: 8ms
-  #     - uart.write: [0xDF, 0xFF, 0xDB, 0xDB]  ## '\r'
-  #     - delay: 8ms
-  #     - uart.write: [0xFB, 0xFB, 0xDB, 0xDB]  ## '\n'
+    #turn_on_action:
+      - uart.write: [0xFB, 0xDF, 0xDB, 0xDF]  ## 'F'
+      - delay: 8ms
+      - uart.write: [0xDF, 0xDB, 0xDB, 0xDF]  ## 'A'
+      - delay: 8ms
+      - uart.write: [0xFB, 0xFB, 0xFF, 0xDB]  ## ':'
+      - delay: 8ms
+      - uart.write: [0xDB, 0xDB, 0xFF, 0xDB]  ## '0'
+      - delay: 8ms
+      - uart.write: [0xFF, 0xDB, 0xFF, 0xDB]  ## '3'
+      - delay: 8ms
+      - uart.write: [0xDF, 0xFF, 0xDB, 0xDB]  ## '\r'
+      - delay: 8ms
+      - uart.write: [0xFB, 0xFB, 0xDB, 0xDB]  ## '\n'
 
 
   - platform: template
@@ -756,4 +736,4 @@ custom_component:
       } else if (id(custom_log_level) == 2) {
         ESP_LOGW("custom", "WARNING level log");
       }
-      return {};  
+      return {};
