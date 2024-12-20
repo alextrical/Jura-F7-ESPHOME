@@ -1,0 +1,73 @@
+# example of a dashboard for a Jura coffee machine in home-assistant
+
+title: Jura
+path: jura
+icon: mdi:coffee-maker
+badges: []
+cards:
+  - type: entities
+    entities:
+      - entity: switch.coffee_machine
+        name: Power button
+        icon: ""
+      - entity: button.make_risoretto
+      - entity: button.make_espresso
+      - entity: button.make_cappuccino
+      - entity: button.make_coffee
+      - entity: button.make_steam
+      - entity: button.make_hot_water
+      - entity: button.jura_menu
+        icon: mdi:menu
+      - entity: button.jura_menu_ccw
+        name: Menu rotate left
+      - entity: button.jura_menu_cw
+        name: Menu rotate right
+      - entity: button.jura_menu_enter
+        name: Menu return
+    title: Jura
+    show_header_toggle: false
+    state_color: false
+  - type: entities
+    entities:
+      - entity: sensor.jura_totaal_teller
+        name: TOTAL counter
+        icon: mdi:sigma
+        accurancy: 1
+      - entity: sensor.coffees_made
+        name: Single Coffee Made
+        secondary_info: none
+      - entity: sensor.double_coffees_made
+      - entity: sensor.single_ristretto_made
+      - entity: sensor.double_ristretto_made
+      - entity: sensor.single_espressos_made
+      - entity: sensor.double_espressos_made
+      - entity: sensor.cleanings_performed
+      - entity: sensor.tray_status
+      - entity: sensor.water_tank_status
+      - entity: sensor.brewunit_motor_movements
+      - entity: sensor.coffee_grounds_in_tray
+    title: jura
+  - type: custom:mini-graph-card
+    entities:
+      - entity: sensor.jura_totaal_teller
+    name: Koffieverbruik
+    show:
+      graph: bar
+    hours_to_show: 120
+    aggregate_func: delta
+    group_by: date
+  - type: custom:apexcharts-card
+    graph_span: 7d
+    span:
+      end: day
+    header:
+      show: true
+      title: Koffie gebruik
+      show_states: true
+      colorize_states: true
+    series:
+      - entity: sensor.jura_coffee_total
+        type: column
+        group_by:
+          func: delta
+          duration: 1d

@@ -1,0 +1,38 @@
+# .gitignore for ESPHome, Home Assistant, and Visual Studio Code
+
+# ESPHome
+/build/
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.log
+*.bin
+
+# Home Assistant
+*.db
+*.log
+./images/*.db
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+.history/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.env
+.env
+.venv
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/

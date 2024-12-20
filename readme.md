@@ -31,6 +31,15 @@ Above image taken from [here](https://community.home-assistant.io/t/control-your
 
 If you have diffuculty, try swapping the TX/RX pins.
 
+# Home Assistant connection and dashboard
+
+Here is a example of a home-assistant dashboard that you can make with the provided functions and counters:
+
+<img src="images/HA-dashboard.png">
+
+[example file](../Home-assistant%20dashboard%20example.yamlHome-assistant dashboard example.yaml)
+
+
 ## reference
 
 Orginal sourcecode is based on: https://github.com/ryanalden/esphome-jura-component / https://community.home-assistant.io/t/control-your-jura-coffee-machine/26604
