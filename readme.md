@@ -1,7 +1,7 @@
 
 # Jura Impressa F-series UART decoder and ESPHOME controller
+![coding_example](/images/coding_example.jpg)
 
-<img src ="/images/coding_example.jpg">
 
 This repository is a advanced version of the basic esphome configuration from Rynald Alden. Its tailort for use with a Jura Impressa F7 coffeemachine.
 In this repository you will find a lot of additions for this Jura Impressa series. This way we managed to decipher more codes from the UART messages of the jura.
@@ -20,14 +20,12 @@ The following counters are now available:
 
 # Hardware connections
 
-Hardware is a Wemos D1 Mini connected to the 7-pin Jura service port via a 3.3V<->5V logic level converter.\
-The D1 mini is powered from the Jura.
+Hardware is a Wemos D1 Mini connected to the 7-pin Jura service port via a 3.3V<->5V logic level converter. The D1 mini is powered from the Jura.
 
-<img src="images/seven-pin-interface.jpg" alt="Jura 7-pin interface">
+![pin interface](images/seven-pin-interface.jpg)
 
 Above image taken from [here](https://community.home-assistant.io/t/control-your-jura-coffee-machine/26604).
-
-<img src="images/connection-diagram.png" alt="Jura 7-pin interface">
+![connections](images/connection-diagram.png)
 
 If you have diffuculty, try swapping the TX/RX pins.
 
@@ -35,11 +33,13 @@ If you have diffuculty, try swapping the TX/RX pins.
 
 Here is a example of a home-assistant dashboard that you can make with the provided functions and counters:
 
-<img src="images/HA-dashboard.png">
+![dashboard](images/HA-dashboard.png)
 
 [example file](../Home-assistant%20dashboard%20example.yamlHome-assistant dashboard example.yaml)
 
-
 ## reference
 
-Orginal sourcecode is based on: https://github.com/ryanalden/esphome-jura-component / https://community.home-assistant.io/t/control-your-jura-coffee-machine/26604
+Orginal sourcecode is based on:
+
+- <https://github.com/ryanalden/esphome-jura-component> 
+- <https://community.home-assistant.io/t/control-your-jura-coffee-machine/26604>
