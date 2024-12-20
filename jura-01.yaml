@@ -710,7 +710,7 @@ binary_sensor:
 # Custom component voor Jura Coffee en logging
 custom_component:
   - id: jura_coffee
-    lambda: !lambda |-
+    lambda: |-
       auto my_jura = new JuraCoffee(
           id(uart_bus),
           id(num_single_espresso),
