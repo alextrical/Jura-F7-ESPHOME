@@ -617,7 +617,7 @@ sensor:
 
   - platform: template
     id: num_descaling
-    name: "Brewunit motor movements"
+    name: "Descalings Performed"
     accuracy_decimals: 0
     lambda: "return {};" 
     filters:
