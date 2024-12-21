@@ -22,6 +22,8 @@ __pycache__/
 *.user
 *.userosscache
 *.sln.docstates
+*.code-workspace
+
 
 # Python
 *.pyc

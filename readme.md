@@ -15,11 +15,11 @@ The following counters are now available:
 - Single Ristretto (*)
 - Double Ristretto (*)
 - Brew-unit movements (*)
-- Cleanings
+- Cleanings performed (*)
+- Descalings performed (*)
 - num of coffee grounds in tray (*)
 
 (*) _all these sensors are new compared to the original esphome interaction by [ryanalden]_
-
 
 # Hardware connections
 
@@ -27,10 +27,19 @@ Hardware is a Wemos D1 Mini connected to the 7-pin Jura service port via a 3.3V<
 
 ![pin interface](images/seven-pin-interface.jpg)
 
-Above image taken from [here](https://community.home-assistant.io/t/control-your-jura-coffee-machine/26604).
+Above image taken from [here][home assistant forum].
 ![connections](images/connection-diagram.png)
 
 If you have diffuculty, try swapping the TX/RX pins.
+Be careful to place the logic leveler otherwise you can damage the Jura!
+
+In my scripts you will also find a piece of extra hardware, namely a One-wire temperature sensor (Dallas 18B), this measures my kitchen temperature. If you do not have this, remove it from my scripts at the marked points.
+
+# Jura UART port protocols
+
+I have not deciphered the protocol myself, I have based this mainly on Ryan's earlier (collected) work. But the file jura_coffee.h contains all the C++ logic to understand the Jura commands and read the EEPROM. I tried to keep the file as readable as possible. The most important parts are the ``counts[0] = parseHexSubstring(data, 3, 7);   // Single espresso`` parts (line 125+), those decode the string from the Jura. 
+
+There a still bits undecoded! the are noted as ``unknown_fields[*]`` in the script!
 
 # Home Assistant connection and dashboard
 
@@ -52,7 +61,8 @@ This is a version 2 dashboard example of the integrated webserver from the ESPho
 Orginal sourcecode is based on:
 
 - [ryanalden]
-- <https://community.home-assistant.io/t/control-your-jura-coffee-machine/26604>
+- [home assistant forum]
 
 
 [ryanalden]: https://github.com/ryanalden/esphome-jura-component
+[home assistant forum]: https://community.home-assistant.io/t/control-your-jura-coffee-machine/26604
