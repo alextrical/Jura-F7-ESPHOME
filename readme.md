@@ -18,10 +18,9 @@ The following counters are now available:
 - Cleanings
 - num of coffee grounds in tray (*)
 
-(*) _all these sensors are new compared to the original esphome interaction by Ryan Alden_
+(*) _all these sensors are new compared to the original esphome interaction by [ryanalden]_
 
-![esphome webserver example ](/images/esphome-webcounters.png)
-----
+
 # Hardware connections
 
 Hardware is a Wemos D1 Mini connected to the 7-pin Jura service port via a 3.3V<->5V logic level converter. The D1 mini is powered from the Jura.
@@ -39,11 +38,21 @@ Here is a example of a home-assistant dashboard that you can make with the provi
 
 ![dashboard](images/HA-dashboard.png)
 
-[example file](../Home-assistant%20dashboard%20example.yamlHome-assistant dashboard example.yaml)
+Here your can find an [example YAML file](../Home-assistant%20dashboard%20example.yaml) from my home-assistant implementation.
+
+# ESPhome webserver examples:
+
+This is a version 2 dashboard example of the integrated webserver from the ESPhome:
+![esphome webserver example ](/images/esphome-webcounters.png)
+
+----
 
 ## reference
 
 Orginal sourcecode is based on:
 
-- <https://github.com/ryanalden/esphome-jura-component> 
+- [ryanalden]
 - <https://community.home-assistant.io/t/control-your-jura-coffee-machine/26604>
+
+
+[ryanalden]: https://github.com/ryanalden/esphome-jura-component
