@@ -1,4 +1,4 @@
-#https://community.home-assistant.io/t/control-your-jura-coffee-machine/26604
+# https://community.home-assistant.io/t/control-your-jura-coffee-machine/26604
 
 substitutions:
   devicename: jura
@@ -46,14 +46,13 @@ wifi:
 captive_portal:
 
 # Enable status LED; very low resolution logging :)
-
-
     
 logger:
-  level: WARN
- 
-debug:
-  update_interval: ${sampling_period}
+  #level: WARN
+  level: DEBUG
+
+# debug:
+#   update_interval: 50s
 
 # ⬇ Enable Home Assistant API ⬇ 
 ota:
@@ -148,7 +147,7 @@ interval:
 ####################################################################################
 
 #an01 = ON switch
-#fa01 = OFF met schoonmaken.
+#fa01 = OFF.
 #fa03 = Maintainanace menu
 #fa04 = ENTER
 #fa05 = Clockwise menu
@@ -240,10 +239,10 @@ button:
   - platform: template
     name: 'jura_menu'
     icon: "mdi:MicrosoftXboxControllerMenu"
-    entity_category: config 
+    entity_category: config
     id: jura_FA03
-    web_server:
-      sorting_group_id: sorting_group_jura_settings
+    # web_server:
+    #   sorting_group_id: sorting_group_jura_settings        
     on_press:
     #turn_on_action:
       - uart.write: [0xFB, 0xDF, 0xDB, 0xDF]  ## 'F'
@@ -587,6 +586,18 @@ sensor:
     #   sorting_group_id: sorting_group_counters 
 
   - platform: template
+    id: num_single_capuccino
+    name: "Single Capuccino Made"
+    state_class: total_increasing   
+    accuracy_decimals: 0
+    lambda: "return {};"
+    filters:
+      - filter_out: nan
+      - skip_initial: 1
+    # web_server:
+    #   sorting_group_id: sorting_group_counters 
+
+  - platform: template
     id: num_double_ristretto
     name: "Double Ristretto Made"
     state_class: total_increasing   
@@ -641,15 +652,15 @@ sensor:
     # web_server:
     #   sorting_group_id: sorting_group_counters 
 
-  - platform: debug
-    free:
-      name: "Heap Free"
-    fragmentation:
-      name: "Heap Fragmentation"
-    block:
-      name: "Heap Max Block"
-    loop_time:
-      name: "Loop Time"
+  # - platform: debug
+  #   free:
+  #     name: "Heap Free"
+  #   fragmentation:
+  #     name: "Heap Fragmentation"
+  #   block:
+  #     name: "Heap Max Block"
+  #   loop_time:
+  #     name: "Loop Time"
 
 
 text_sensor:
@@ -696,11 +707,11 @@ text_sensor:
     # web_server:
     #   sorting_group_id: sorting_group_jura_settings 
   
-  - platform: debug
-    device:
-      name: "Device Info"
-    reset_reason:
-      name: "Reset Reason"  
+  # - platform: debug
+  #   device:
+  #     name: "Device Info"
+  #   reset_reason:
+  #     name: "Reset Reason"  
 
 binary_sensor:
   - platform: status
@@ -710,7 +721,7 @@ binary_sensor:
 # Custom component voor Jura Coffee en logging
 custom_component:
   - id: jura_coffee
-    lambda: |-
+    lambda: !lambda |-
       auto my_jura = new JuraCoffee(
           id(uart_bus),
           id(num_single_espresso),
@@ -718,7 +729,8 @@ custom_component:
           id(num_coffee),
           id(num_double_coffee),
           id(num_ristretto),
-          id(num_double_ristretto),
+          id(num_single_capuccino),
+          id(num_double_ristretto),        
           id(num_brewunit_movements),
           id(num_clean),
           id(num_coffee_Grounds),
@@ -736,4 +748,4 @@ custom_component:
       } else if (id(custom_log_level) == 2) {
         ESP_LOGW("custom", "WARNING level log");
       }
-      return {};
+      return {};  
