@@ -2,16 +2,16 @@
 
 class JuraCoffee : public PollingComponent, public UARTDevice {
  private:
-  Sensor *sensors[9];  // Number of sensors
+  Sensor *sensors[10];  // Number of sensors
   TextSensor *text_sensors[2];
-  long counts[9];  
+  long counts[10];  
   std::string tray_status, tank_status;
 
   const String CMD_EEPROM = "RT:0000";
   const String CMD_IC = "IC:";
 
  public:
-  JuraCoffee(UARTComponent *parent, Sensor *sensor1, Sensor *sensor2, Sensor *sensor3, Sensor *sensor4, Sensor *sensor5, Sensor *sensor6, Sensor *sensor7, Sensor *sensor8, Sensor *sensor9, 
+  JuraCoffee(UARTComponent *parent, Sensor *sensor1, Sensor *sensor2, Sensor *sensor3, Sensor *sensor4, Sensor *sensor5, Sensor *sensor6, Sensor *sensor7, Sensor *sensor8, Sensor *sensor9, Sensor *sensor10, 
              TextSensor *text_sensor1, TextSensor *text_sensor2)
       : UARTDevice(parent) {
     sensors[0] = sensor1;  // Single espresso
@@ -20,9 +20,10 @@ class JuraCoffee : public PollingComponent, public UARTDevice {
     sensors[3] = sensor4;  // Double coffee
     sensors[4] = sensor5;  // Cleanings
 	  sensors[5] = sensor6;  // Single Ristretto
-	  sensors[6] = sensor7;  // Double Ristretto
-    sensors[7] = sensor8;  // Brew-unit movements
-    sensors[8] = sensor9;  // # of coffee grounds due to cleaning 
+    sensors[6] = sensor7;  // Single capuccino    
+	  sensors[7] = sensor8;  // Double Ristretto
+    sensors[8] = sensor9;  // Brew-unit movements
+    sensors[9] = sensor10;  // # of coffee grounds due to tray cleaning 
          
     text_sensors[0] = text_sensor1;  // tank status 
     text_sensors[1] = text_sensor2;  // tray status
@@ -30,7 +31,7 @@ class JuraCoffee : public PollingComponent, public UARTDevice {
  
 
   void setup() override {
-    this->set_update_interval(60000);  // Update interval: 60 seconden
+    this->set_update_interval(60000);  // Update interval: 60 seconds
   }
 
   void update() override {
@@ -53,7 +54,7 @@ class JuraCoffee : public PollingComponent, public UARTDevice {
   }
 
  private:
-  // Functie om data op te halen van de koffiemachine
+  // Function for reading data from the Jura coffee machine
   String fetchData(const String &command) {
     String result;
     int timeout = 0;
@@ -97,7 +98,7 @@ class JuraCoffee : public PollingComponent, public UARTDevice {
     return inbytes.substring(0, inbytes.length() - 2);
   }
 
-  // Helper om hexadecimale substrings veilig te parsen
+  // Helper for parsing a hexadecimal substring
   long parseHexSubstring(const String &data, int start, int end) {
     if (end > data.length() || start < 0 || start >= end) {
       ESP_LOGE("main", "Invalid substring range: start=%d, end=%d", start, end);
@@ -125,8 +126,8 @@ bool processEEPROMData(const String &data) {
 
   // Log the raw unparsed EEPROM data in one line
 
-  String log_msg = "Raw EEPROM Data: " + data;
-  ESP_LOGD("main", "%s", log_msg.c_str());
+  //String log_msg = "Raw EEPROM Data: " + data;
+  //ESP_LOGD("main", "%s", log_msg.c_str());
   
 
   // Log the raw unparsed EEPROM data in one line
@@ -135,36 +136,37 @@ bool processEEPROMData(const String &data) {
   // Known fields
   counts[0] = parseHexSubstring(data, 3, 7);   // Single espresso
   counts[1] = parseHexSubstring(data, 7, 11);  // Double espresso
-  counts[2] = parseHexSubstring(data, 11, 15); // Coffee
+  counts[2] = parseHexSubstring(data, 11, 15); // Single Coffee
   counts[3] = parseHexSubstring(data, 15, 19); // Double coffee
-  counts[4] = parseHexSubstring(data, 19, 23); // Single Ristretto
-  counts[5] = parseHexSubstring(data, 27, 31); // Double Ristretto  
-  counts[6] = parseHexSubstring(data, 31, 35); // Brew-unit movements
-  counts[7] = parseHexSubstring(data, 35, 39); // Cleanings
-  counts[8] = parseHexSubstring(data, 59, 63); // num of coffee grounds due to cleaning 
+  counts[4] = parseHexSubstring(data, 19, 23); // Single Ristretto  
+  counts[5] = parseHexSubstring(data, 23, 27); // Single Capuccino
+  counts[6] = parseHexSubstring(data, 27, 31); // Double Ristretto   
+  counts[7] = parseHexSubstring(data, 31, 35); // Brew-unit movements
+  counts[8] = parseHexSubstring(data, 35, 39); // Cleanings
+  counts[9] = parseHexSubstring(data, 59, 63); // num of coffee grounds due to cleaning 
   
   /*
   // Log the known counter fields
-    for (int i = 0; i < 9; ++i) { // actual counts[i] replace it when needed
-    ESP_LOGD("main", "counters %d: %ld", i + 1, counts[i]);
+  //  for (int i = 0; i < 10; ++i) { // actual counts[i] replace it when needed
+  //  ESP_LOGD("main", "counters %d: %ld", i + 1, counts[i]);
   }
 */
 
   // Unknown fields 
-//  long unknown_fields[7]; // number of unknown fields 47, 51)
+  // long unknown_fields[6]; 
 
-//   unknown_fields[0] = parseHexSubstring(data, 23, 27); // Unknown field 
-//   unknown_fields[1] = parseHexSubstring(data, 39, 43); // Unknown field 
-//   unknown_fields[2] = parseHexSubstring(data, 43, 47); // Unknown field 
-//   unknown_fields[3] = parseHexSubstring(data, 47, 51); // Unknown field 
-//   unknown_fields[4] = parseHexSubstring(data, 51, 55); // Unknown field 
-//   unknown_fields[5] = parseHexSubstring(data, 55, 59); // Unknown field 
-//   unknown_fields[6] = parseHexSubstring(data, 63, 67); // Unknown field 
+  //  //unknown_fields[0] = parseHexSubstring(data, 27, 31); // Unknown field 
+  //  unknown_fields[0] = parseHexSubstring(data, 39, 43); // Unknown field 
+  //  unknown_fields[1] = parseHexSubstring(data, 43, 47); // Unknown field 
+  //  unknown_fields[2] = parseHexSubstring(data, 47, 51); // Unknown field 
+  //  unknown_fields[3] = parseHexSubstring(data, 51, 55); // Unknown field 
+  //  unknown_fields[4] = parseHexSubstring(data, 55, 59); // Unknown field 
+  //  unknown_fields[5] = parseHexSubstring(data, 63, 67); // Unknown field 
 
-//   // Log the unanalyzed fields
-//   for (int i = 0; i < 7; ++i) { // actual unknown_fields[i] replace it when needed
-//     ESP_LOGD("main", "Unknown Field %d: %ld", i + 1, unknown_fields[i]);
-//   }
+  //  // Log the unanalyzed fields
+  //  for (int i = 0; i < 6; ++i) { // actual unknown_fields[i] replace it when needed 0 + [i]
+  //    ESP_LOGD("main", "Unknown Field %d: %ld", i + 1, unknown_fields[i]);
+  //  }
 
   return true;
 }
@@ -183,9 +185,9 @@ bool processEEPROMData(const String &data) {
     return true;
   }
 
-  // Publiceer data naar sensoren
+  // Publiceer data to sensors
   void publishSensorData() {
-    for (int i = 0; i < 9; i++) { // actual count[i] replace it when needed
+    for (int i = 0; i < 10; i++) { // actual count[i] replace it when needed
       if (sensors[i] != nullptr) {
         sensors[i]->publish_state(counts[i]);
       }

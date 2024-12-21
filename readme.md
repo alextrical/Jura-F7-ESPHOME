@@ -12,6 +12,7 @@ The following counters are now available:
 - Double espresso
 - Single Coffee
 - Double coffee
+- Single cappucino
 - Single Ristretto
 - Double Ristretto
 - Brew-unit movements
