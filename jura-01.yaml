@@ -1,3 +1,4 @@
+# credits: Author: @alco28
 
 substitutions:
   devicename: jura
@@ -26,15 +27,6 @@ esphome:
   name_add_mac_suffix: false
 
 globals:
- - id: single_coffee_made_counter
-   type: int
-   restore_value: yes
-   initial_value: '0'
- - id: custom_log_level
-   type: int
-   restore_value: yes
-   initial_value: '0'
-
 
 wifi:
   ssid: !secret wifi_ssid
@@ -54,8 +46,6 @@ wifi:
 
 captive_portal:
 
-# Enable status LED; very low resolution logging :)
-    
 logger: # set to wan to reduce SRAM logging errors
   level: WARN
   #level: DEBUG
@@ -76,15 +66,7 @@ safe_mode:
 api:
   encryption:
     key: !secret api_key_password
-  id: api_apiserver
-  services:
-    - service: set_custom_log_level
-      variables:
-        level: int
-      then:
-        - lambda: |-
-            id(custom_log_level) = level;  
-            ESP_LOGD("custom", "Log level set to: %d", level);
+
 
 web_server:
   port: 80
@@ -100,6 +82,9 @@ web_server:
   #     name: "Coffee products menu"
   #     sorting_weight: 20  
 
+
+# Enable status LED; very low resolution logging :)
+    
 status_led:
   
   pin:
@@ -194,19 +179,7 @@ switch:
     optimistic: true
     assumed_state: true
 
-  - platform: template
-    name: "ESP Log Level"
-   # internal: true
-    lambda: |-
-      return id(custom_log_level) == 0;
-    turn_on_action:
-      - lambda: |-
-          id(custom_log_level) = 0;
-          ESP_LOGD("custom", "Log level set to DEBUG");
-    turn_off_action:
-      - lambda: |-
-          id(custom_log_level) = 1;
-          ESP_LOGI("custom", "Log level set to INFO");
+
 
 
 #################  BUTTONS  ###############################
@@ -216,11 +189,6 @@ button:
     entity_category: config 
     # web_server:
     #   sorting_group_id: sorting_group_jura_settings    
- # - platform: template
-  #  name: "Toggle Log Level"
-   #  then:
-     #   - lambda: |-
-      #     ESP_LOGD("custom", "Log level toggled to: %d", id(custom_log_level));
 
   - platform: template
     name: "reset coffe made counter"
@@ -470,6 +438,7 @@ button:
 ##############################  SENSORS  ############################
 sensor:
 
+#---------------------- Dallas temperature sensor ----------------------
   - platform: dallas_temp   
     id: temperature1
     # web_server:
@@ -490,6 +459,7 @@ sensor:
           send_first_at: 10 
       - lambda:  return x * 0.8;
 
+# ---------------------- Uptime and WiFi signal ----------------------
   - platform: uptime
     name: "${friendly_name} Uptime"
     internal: true
@@ -500,10 +470,22 @@ sensor:
     update_interval: 240s
     entity_category: diagnostic
     internal: true
-    
+
+
+  # - platform: debug
+  #   free:
+  #     name: "Heap Free"
+  #   fragmentation:
+  #     name: "Heap Fragmentation"
+  #   block:
+  #     name: "Heap Max Block"
+  #   loop_time:
+  #     name: "Loop Time"
+   
+#--------------------------------------jura sensor counters --------------------------------------------
+
   - platform: template
-    id: num_single_espresso
-    
+    id: num_single_espresso    
     name: "Single Espressos Made"
     accuracy_decimals: 0
     state_class: total_increasing
@@ -529,7 +511,7 @@ sensor:
 
   - platform: template
     id: num_coffee
-    name: "Coffees Made"
+    name: "Single Coffees Made"
     accuracy_decimals: 0
     state_class: total_increasing
     lambda: "return {};"  
@@ -540,8 +522,7 @@ sensor:
           id(single_coffee_made_counter) += x;         
           return x;
     # web_server:
-    #   sorting_group_id: sorting_group_counters 
-      
+    #   sorting_group_id: sorting_group_counters  
 
       
   - platform: template
@@ -557,20 +538,20 @@ sensor:
     #   sorting_group_id: sorting_group_counters 
 
   - platform: template
-    id: num_clean
-    name: "Cleanings Performed"
+    id: num_ristretto
+    name: "Single Ristretto Made"
     state_class: total_increasing   
     accuracy_decimals: 0
     lambda: "return {};"
-    filters: 
-      - filter_out: nan   
+    filters:
+      - filter_out: nan
       - skip_initial: 1
     # web_server:
     #   sorting_group_id: sorting_group_counters 
 
   - platform: template
-    id: num_ristretto
-    name: "Single Ristretto Made"
+    id: num_double_ristretto
+    name: "Double Ristretto Made"
     state_class: total_increasing   
     accuracy_decimals: 0
     lambda: "return {};"
@@ -592,14 +573,15 @@ sensor:
     # web_server:
     #   sorting_group_id: sorting_group_counters 
 
+
   - platform: template
-    id: num_double_ristretto
-    name: "Double Ristretto Made"
+    id: num_clean
+    name: "Cleanings Performed"
     state_class: total_increasing   
     accuracy_decimals: 0
     lambda: "return {};"
-    filters:
-      - filter_out: nan
+    filters: 
+      - filter_out: nan   
       - skip_initial: 1
     # web_server:
     #   sorting_group_id: sorting_group_counters 
@@ -644,31 +626,7 @@ sensor:
     # web_server:
     #   sorting_group_id: sorting_group_counters 
 
-  - platform: template
-    id: sensor_coffee_counter 
-    update_interval: 2min
-    #accuracy_decimals: 0
-    name: "Single Coffee usage"
-    lambda: |-
-      return (id(num_coffee).state);
-    filters: 
-      - filter_out: nan   
-      - skip_initial: 1
-    # web_server:
-    #   sorting_group_id: sorting_group_counters 
-
-
-  # - platform: debug
-  #   free:
-  #     name: "Heap Free"
-  #   fragmentation:
-  #     name: "Heap Fragmentation"
-  #   block:
-  #     name: "Heap Max Block"
-  #   loop_time:
-  #     name: "Loop Time"
-
-
+#-------- text sensors for diagnostic purposes ---------------------
 text_sensor:
   - platform: version
     name: "${friendly_name} ESPHome version"
@@ -697,8 +655,13 @@ text_sensor:
       icon: mdi:folder-key-network-outline 
       internal: true
       entity_category: diagnostic
+  # - platform: debug
+  #   device:
+  #     name: "Device Info"
+  #   reset_reason:
+  #     name: "Reset Reason"  
 
-
+#---------------------- Jura coffee machine tray and water status ----------------------
   - platform: template
     id: tray_status
     name: "Tray Status"
@@ -713,18 +676,15 @@ text_sensor:
     # web_server:
     #   sorting_group_id: sorting_group_jura_settings 
   
-  # - platform: debug
-  #   device:
-  #     name: "Device Info"
-  #   reset_reason:
-  #     name: "Reset Reason"  
 
 binary_sensor:
   - platform: status
     name: "${friendly_name} Status"
     entity_category: diagnostic
 
-# Custom component for Jura Coffee en logging
+#------------------custom componente for Jura Coffee decoding ----------------------
+
+# The order of sensors must align with the order in the JuraCoffee constructor @ jura_coffee.h
 custom_component:
   - id: jura_coffee
     lambda: !lambda |-
@@ -746,13 +706,3 @@ custom_component:
       );
       return {my_jura};
 
-  - id: custom_logger
-    lambda: |-
-      if (id(custom_log_level) == 0) {
-        ESP_LOGD("custom", "DEBUG level log");
-      } else if (id(custom_log_level) == 1) {
-        ESP_LOGI("custom", "INFO level log");
-      } else if (id(custom_log_level) == 2) {
-        ESP_LOGW("custom", "WARNING level log");
-      }
-      return {};  

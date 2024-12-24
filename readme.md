@@ -1,5 +1,6 @@
 
 # Jura Impressa F-series UART decoder and ESPHOME controller
+
 ![coding_example](/images/coding_example.jpg)
 
 This repository is a advanced version of the basic esphome configuration from Rynald Alden. Its tailort for use with a Jura Impressa F7 coffeemachine.
@@ -40,6 +41,7 @@ In my scripts you will also find a piece of extra hardware, namely a One-wire te
 I have not deciphered the protocol myself, I have based this mainly on Ryan's earlier (collected) work. But the file jura_coffee.h contains all the C++ logic to understand the Jura commands and read the EEPROM. I tried to keep the file as readable as possible. The most important parts are the ``counts[0] = parseHexSubstring(data, 3, 7);   // Single espresso`` parts (line 125+), those decode the string from the Jura. 
 
 There a still bits undecoded! the are noted as ``unknown_fields[*]`` in the script!
+There is a good documentation reference at the [Jura Proto project][Jura Proto github]
 
 # Home Assistant connection and dashboard
 
@@ -49,7 +51,7 @@ Here is a example of a home-assistant dashboard that you can make with the provi
 
 Here your can find an [example YAML file](../Home-assistant%20dashboard%20example.yaml) from my home-assistant implementation.
 
-# ESPhome webserver examples:
+# ESPhome webserver examples
 
 This is a version 2 dashboard example of the integrated webserver from the ESPhome:
 ![esphome webserver example ](/images/esphome-webcounters.png)
@@ -60,9 +62,10 @@ This is a version 2 dashboard example of the integrated webserver from the ESPho
 
 Orginal sourcecode is based on:
 
-- [ryanalden]
+- [Ryan Alden Github][ryanalden]
 - [home assistant forum]
-
+- [Jura Proto project][Jura Proto github]
 
 [ryanalden]: https://github.com/ryanalden/esphome-jura-component
 [home assistant forum]: https://community.home-assistant.io/t/control-your-jura-coffee-machine/26604
+[Jura Proto github]: https://github.com/Jutta-Proto/protocol-cpp?tab=readme-ov-file
