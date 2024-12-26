@@ -22,17 +22,17 @@ The following counters are now available:
 
 (*) _all these sensors are new compared to the original esphome interaction by [ryanalden]_
 
-<div style="background: green; padding: 10px;">
-  <p><strong>Warning:</strong> There is an extensive WIKI on this GitHub in development where the information below is described in more detail and better! 
-  
-  <h1><a href="https://github.com/alco28/Jura-F7-ESPHOME/wiki">CLICK HERE FOR THE WIKI</a></p></h1>
-</div>
+| **[There is an extensive WIKI on this GitHub in development where the information below is described in more detail and better!](https://github.com/alco28/Jura-F7-ESPHOME/wiki)** |
+| :--------------------------------------------------------------------------------------------------------------------------- |
+
+``DISCLAIMER: By proceeding with the actions described below, you agree to assume full risk. The author of this documentation hereby expressly disclaims any liability for damage, loss of data, or other problems that may arise as a result of following these instructions. These actions may also void the product's manufacturer's warranty.``
 
 # Hardware connections
 
 Hardware is a Wemos D1 Mini connected to the 7-pin Jura service port via a 3.3V<->5V logic level converter. The D1 mini is powered from the Jura.
 
 ![ueart2](./images/uart_pinout.png)
+
 The first pin is on the right and number 8 is on the left
 You need:
 
