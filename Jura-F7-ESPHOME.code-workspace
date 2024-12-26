@@ -5,11 +5,16 @@
 		},
 		{
 			"path": "S:/esphome"
+		},
+		{
+			"name": "Jura-F7-ESPHOME.wiki",
+			"path": "../Jura-F7-ESPHOME.wiki"
 		}
 	],
 	"settings": {
 		"files.associations": {
 			"*.yaml": "home-assistant"
-		}
+		},
+		"commentTranslate.targetLanguage": "en"
 	}
 }

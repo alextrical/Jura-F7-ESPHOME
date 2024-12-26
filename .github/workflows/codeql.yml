@@ -20,7 +20,8 @@ jobs:
 
     strategy:
       matrix:
-        language: [ "python", "cpp" ] # Voeg Python en C++ toe voor analyse
+        language: [  "cpp" ] # Voeg Python en C++ toe voor analyse
+       # language: [ "python", "cpp" ] # Voeg Python en C++ toe voor analyse
 
     steps:
     - name: Checkout code

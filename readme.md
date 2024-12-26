@@ -22,16 +22,32 @@ The following counters are now available:
 
 (*) _all these sensors are new compared to the original esphome interaction by [ryanalden]_
 
+<div style="background: green; padding: 10px;">
+  <p><strong>Warning:</strong> There is an extensive WIKI on this GitHub in development where the information below is described in more detail and better! 
+  
+  <h1><a href="https://github.com/alco28/Jura-F7-ESPHOME/wiki">CLICK HERE FOR THE WIKI</a></p></h1>
+</div>
+
 # Hardware connections
 
 Hardware is a Wemos D1 Mini connected to the 7-pin Jura service port via a 3.3V<->5V logic level converter. The D1 mini is powered from the Jura.
 
-![pin interface](images/seven-pin-interface.jpg)
+![ueart2](./images/uart_pinout.png)
+The first pin is on the right and number 8 is on the left
+You need:
 
-Above image taken from [here][home assistant forum].
+| pin-out | function    |
+| :------ | :--------- |
+| (2)     | TX         |
+| (3)     | Ground     |
+| (4)     | RX         |
+| (6)     | **5** Volt |
+
+## wire-connections
+
 ![connections](images/connection-diagram.png)
 
-If you have diffuculty, try swapping the TX/RX pins.
+If you have difficulty, try swapping the TX/RX pins.
 Be careful to place the logic leveler otherwise you can damage the Jura!
 
 In my scripts you will also find a piece of extra hardware, namely a One-wire temperature sensor (Dallas 18B), this measures my kitchen temperature. If you do not have this, remove it from my scripts at the marked points.
@@ -40,7 +56,7 @@ In my scripts you will also find a piece of extra hardware, namely a One-wire te
 
 I have not deciphered the protocol myself, I have based this mainly on Ryan's earlier (collected) work. But the file jura_coffee.h contains all the C++ logic to understand the Jura commands and read the EEPROM. I tried to keep the file as readable as possible. The most important parts are the ``counts[0] = parseHexSubstring(data, 3, 7);   // Single espresso`` parts (line 125+), those decode the string from the Jura. 
 
-There a still bits undecoded! the are noted as ``unknown_fields[*]`` in the script!
+There a still bits un decoded! the are noted as ``unknown_fields[*]`` in the script!
 There is a good documentation reference at the [Jura Proto project][Jura Proto github]
 
 # Home Assistant connection and dashboard
