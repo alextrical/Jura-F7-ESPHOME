@@ -19,14 +19,14 @@ esphome:
   comment: ${device_description}
   platformio_options:
     upload_speed: 115200
-  # includes:
-  #   - jura_coffee.h
   name_add_mac_suffix: false
 
 esp8266:
   board: d1_mini
+  framework:
+    version: dev #fix for "elf2bin.py SyntaxWarning: invalid escape sequence '\s'"
 
-#globals:
+# globals:
 
 wifi:
   ssid: !secret wifi_ssid
@@ -104,6 +104,56 @@ one_wire:
     pin: D5
 ##############################################################################
 
+# Use the external component
+external_components:
+  - source: components
+
+# Configure the Jura Coffee component
+jura_coffee:
+  uart_id: uart_bus
+  update_interval: 60s
+  sensors:
+    num_single_espresso:
+      name: "Single Espresso Count"
+      id: single_espresso_count
+    num_double_espresso:
+      name: "Double Espresso Count"
+      id: double_espresso_count
+    num_coffee:
+      name: "Coffee Count"
+      id: coffee_count
+    num_double_coffee:
+      name: "Double Coffee Count"
+      id: double_coffee_count
+    num_ristretto:
+      name: "Ristretto Count"
+      id: ristretto_count
+    num_single_capuccino:
+      name: "Single Cappuccino Count"
+      id: single_cappuccino_count
+    num_double_ristretto:
+      name: "Double Ristretto Count"
+      id: double_ristretto_count
+    num_brewunit_movements:
+      name: "Brew Unit Movements"
+      id: brewunit_movements
+    num_clean:
+      name: "Cleaning Count"
+      id: clean_count
+    num_descaling:
+      name: "Descaling Count"
+      id: descaling_count
+    num_coffee_Grounds:
+      name: "Coffee Grounds Count"
+      id: coffee_grounds_count
+  text_sensors:
+    tray_status:
+      name: "Drip Tray Status"
+      id: tray_status1
+    tank_status:
+      name: "Water Tank Status"
+      id: tank_status1
+
 script:
   - id: send_string
     parameters:
@@ -127,11 +177,11 @@ script:
       - uart.write: [0xDF, 0xFF, 0xDB, 0xDB]  ## '\r'
       - delay: 8ms
       - uart.write: [0xFB, 0xFB, 0xDB, 0xDB]  ## '\n'
-#   - id: reset_coffee_made_counter
-#     then:
-#       - lambda: |-
-#           id(single_coffee_made_counter) = 0;
-#           id(num_coffee).publish_state(id(single_coffee_made_counter));
+  # - id: reset_coffee_made_counter
+  #   then:
+  #     - lambda: |-
+  #         id(single_coffee_made_counter) = 0;
+  #         id(num_coffee).publish_state(id(single_coffee_made_counter));
 
 #   - id: publish_states
 #     then:
@@ -413,8 +463,8 @@ sensor:
   #     - lambda: |-
   #         id(single_coffee_made_counter) += x;         
   #         return x;
-    # web_server:
-    #   sorting_group_id: sorting_group_counters  
+  #   web_server:
+  #     sorting_group_id: sorting_group_counters  
 
       
   - platform: template
@@ -573,28 +623,4 @@ binary_sensor:
   - platform: status
     name: "${friendly_name} Status"
     entity_category: diagnostic
-
-#------------------custom componente for Jura Coffee decoding ----------------------
-
-# # The order of sensors must align with the order in the JuraCoffee constructor @ jura_coffee.h
-# custom_component:
-#   - id: jura_coffee
-#     lambda: !lambda |-
-#       auto my_jura = new JuraCoffee(
-#           id(uart_bus),
-#           id(num_single_espresso),
-#           id(num_double_espresso),
-#           id(num_coffee),
-#           id(num_double_coffee),
-#           id(num_ristretto),
-#           id(num_single_capuccino),
-#           id(num_double_ristretto),        
-#           id(num_brewunit_movements),
-#           id(num_clean),
-#           id(num_descaling),
-#           id(num_coffee_Grounds),
-#           id(tray_status),          
-#           id(tank_status)
-#       );
-#       return {my_jura};
 

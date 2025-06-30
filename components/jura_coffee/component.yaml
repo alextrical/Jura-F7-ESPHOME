@@ -1,0 +1,5 @@
+name: Jura F7 Coffee Machine
+description: ESPHome component for Jura F7 coffee machine via UART
+files:
+  - jura_f7.h
+  - jura_f7.cpp
