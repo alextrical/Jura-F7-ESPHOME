@@ -72,6 +72,17 @@ Here your can find an [example YAML file](../Home-assistant%20dashboard%20exampl
 This is a version 2 dashboard example of the integrated webserver from the ESPhome:
 ![esphome webserver example ](/images/esphome-webcounters.png)
 
+## Developing, Testing & Debugging
+Create/activate environment by running from project root:
+```bash
+source scripts/setup_build_env.sh
+```
+
+To Build ESPHome firmware on your local machine:
+```bash
+esphome compile jura-01.yaml
+```
+
 ----
 
 ## reference

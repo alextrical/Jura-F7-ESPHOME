@@ -17,16 +17,16 @@ substitutions:
 esphome:
   name: $devicename
   comment: ${device_description}
-  platform: ESP8266
-  board: d1_mini
   platformio_options:
     upload_speed: 115200
-  includes:
-    - jura_coffee.h
-  esp8266_restore_from_flash: True
+  # includes:
+  #   - jura_coffee.h
   name_add_mac_suffix: false
 
-globals:
+esp8266:
+  board: d1_mini
+
+#globals:
 
 wifi:
   ssid: !secret wifi_ssid
@@ -70,17 +70,17 @@ api:
 
 web_server:
   port: 80
-  version: 2
-  # sorting_groups:
-  #   - id: sorting_group_jura_settings
-  #     name: "Jura Settings"
-  #     sorting_weight: 10
-  #   - id: sorting_group_counters
-  #     name: "Counters"
-  #     sorting_weight: 30  
-  #   - id: Coffee_products_menu
-  #     name: "Coffee products menu"
-  #     sorting_weight: 20  
+  version: 3
+  sorting_groups:
+    - id: sorting_group_jura_settings
+      name: "Jura Settings"
+      sorting_weight: 10
+    - id: sorting_group_counters
+      name: "Counters"
+      sorting_weight: 30  
+    - id: Coffee_products_menu
+      name: "Coffee products menu"
+      sorting_weight: 20  
 
 
 # Enable status LED; very low resolution logging :)
@@ -105,21 +105,43 @@ one_wire:
 ##############################################################################
 
 script:
-  - id: reset_coffee_made_counter
+  - id: send_string
+    parameters:
+      command: string
     then:
       - lambda: |-
-          id(single_coffee_made_counter) = 0;
-          id(num_coffee).publish_state(id(single_coffee_made_counter));
+          #define MAKE_BYTE(src, hi, lo) (static_cast<uint8_t>(0b01011011 | (((src >> (hi)) & 1) << 5) | (((src >> (lo)) & 1) << 2)))
+          for (char c : command) {
+            uint8_t bytes[4] = {
+                MAKE_BYTE(static_cast<uint8_t>(c), 1, 0),
+                MAKE_BYTE(static_cast<uint8_t>(c), 3, 2),
+                MAKE_BYTE(static_cast<uint8_t>(c), 5, 4),
+                MAKE_BYTE(static_cast<uint8_t>(c), 7, 6)
+            };
 
-  - id: publish_states
-    then:
-      - lambda: |-
-          id(num_coffee).publish_state(id(single_coffee_made_counter));   
+            for (int i = 0; i < 4; i++) {
+              id(uart_bus).write_byte(bytes[i]);
+            }
+            delay(12);
+          }
+      - uart.write: [0xDF, 0xFF, 0xDB, 0xDB]  ## '\r'
+      - delay: 8ms
+      - uart.write: [0xFB, 0xFB, 0xDB, 0xDB]  ## '\n'
+#   - id: reset_coffee_made_counter
+#     then:
+#       - lambda: |-
+#           id(single_coffee_made_counter) = 0;
+#           id(num_coffee).publish_state(id(single_coffee_made_counter));
+
+#   - id: publish_states
+#     then:
+#       - lambda: |-
+#           id(num_coffee).publish_state(id(single_coffee_made_counter));   
              
-interval:
-  - interval: 24h  
-    then:
-      - script.execute: reset_coffee_made_counter
+# interval:
+#   - interval: 24h  
+#     then:
+#       - script.execute: reset_coffee_made_counter
 
 
 ################# CONTROL JURA FROM ESPHOME #################################################################
@@ -145,37 +167,17 @@ switch:
     name: 'Coffee Machine'
     icon: "mdi:coffee-maker"
     id: jura_on_off_switch
-    # web_server:
-      # sorting_group_id: sorting_group_jura_settings    
+    web_server:
+      sorting_group_id: sorting_group_jura_settings    
     turn_on_action:
-      - uart.write: [0xDF, 0xDB, 0xDB, 0xDF]  ## 'A'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFF, 0xDB, 0xDF]  ## 'N'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xFF, 0xDB]  ## ':'
-      - delay: 8ms
-      - uart.write: [0xDB, 0xDB, 0xFF, 0xDB]  ## '0'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xDB, 0xFF, 0xDB]  ## '1'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xFF, 0xDB, 0xDB]  ## '\r'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xDB, 0xDB]  ## '\n'
+      - script.execute: 
+          id: send_string
+          command: 'AN:01'
 
     turn_off_action:
-      - uart.write: [0xFB, 0xDF, 0xDB, 0xDF]  ## 'F'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xDB, 0xDB, 0xDF]  ## 'A'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xFF, 0xDB]  ## ':'
-      - delay: 8ms
-      - uart.write: [0xDB, 0xDB, 0xFF, 0xDB]  ## '0'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xDB, 0xFF, 0xDB]  ## '1'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xFF, 0xDB, 0xDB]  ## '\r'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xDB, 0xDB]  ## '\n'
+      - script.execute: 
+          id: send_string
+          command: 'FA:01'
     optimistic: true
     assumed_state: true
 
@@ -187,14 +189,14 @@ button:
   - platform: restart
     name: "${devicename} Jura ESP restart"
     entity_category: config 
-    # web_server:
-    #   sorting_group_id: sorting_group_jura_settings    
+    web_server:
+      sorting_group_id: sorting_group_jura_settings    
 
-  - platform: template
-    name: "reset coffe made counter"
-    icon: "mdi:restart"
-    on_press:
-      - script.execute: reset_coffee_made_counter
+  # - platform: template
+  #   name: "reset coffe made counter"
+  #   icon: "mdi:restart"
+  #   on_press:
+  #     - script.execute: reset_coffee_made_counter
     # web_server:
     #   sorting_group_id: sorting_group_jura_settings    
 
@@ -204,87 +206,47 @@ button:
     icon: "mdi:MicrosoftXboxControllerMenu"
     entity_category: config
     id: jura_FA03
-    # web_server:
-    #   sorting_group_id: sorting_group_jura_settings        
+    web_server:
+      sorting_group_id: sorting_group_jura_settings        
     on_press:
     #turn_on_action:
-      - uart.write: [0xFB, 0xDF, 0xDB, 0xDF]  ## 'F'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xDB, 0xDB, 0xDF]  ## 'A'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xFF, 0xDB]  ## ':'
-      - delay: 8ms
-      - uart.write: [0xDB, 0xDB, 0xFF, 0xDB]  ## '0'
-      - delay: 8ms
-      - uart.write: [0xFF, 0xDB, 0xFF, 0xDB]  ## '3'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xFF, 0xDB, 0xDB]  ## '\r'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xDB, 0xDB]  ## '\n'
+      - script.execute: 
+          id: send_string
+          command: 'FA:03'
 
 
   - platform: template
     name: 'jura_menu_ENTER'
     icon: "mdi:keyboard-return"
     id: jura_FA04
-    # web_server:
-    #   sorting_group_id: sorting_group_jura_settings        
+    web_server:
+      sorting_group_id: sorting_group_jura_settings        
     on_press:
-      - uart.write: [0xFB, 0xDF, 0xDB, 0xDF]  ## 'F'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xDB, 0xDB, 0xDF]  ## 'A'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xFF, 0xDB]  ## ':'
-      - delay: 8ms
-      - uart.write: [0xDB, 0xDB, 0xFF, 0xDB]  ## '0'
-      - delay: 8ms
-      - uart.write: [0xDB, 0xDF, 0xFF, 0xDB]  ## '4'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xFF, 0xDB, 0xDB]  ## '\r'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xDB, 0xDB]  ## '\n'
+      - script.execute: 
+          id: send_string
+          command: 'FA:04'
 
   - platform: template
     name: 'jura_menu_CCW'
     icon: "mdi:menu-left-outline"
     id: jura_FA05
-    # web_server:
-    #   sorting_group_id: sorting_group_jura_settings        
+    web_server:
+      sorting_group_id: sorting_group_jura_settings        
     on_press:
-      - uart.write: [0xFB, 0xDF, 0xDB, 0xDF]  ## 'F'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xDB, 0xDB, 0xDF]  ## 'A'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xFF, 0xDB]  ## ':'
-      - delay: 8ms
-      - uart.write: [0xDB, 0xDB, 0xFF, 0xDB]  ## '0'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xDF, 0xFF, 0xDB]  ## '6'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xFF, 0xDB, 0xDB]  ## '\r'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xDB, 0xDB]  ## '\n'
+      - script.execute: 
+          id: send_string
+          command: 'FA:06'
 
   - platform: template
     name: 'jura_menu_CW'
     icon: "mdi:menu-right-outline"
     id: jura_FA06
-    # web_server:
-    #   sorting_group_id: sorting_group_jura_settings        
+    web_server:
+      sorting_group_id: sorting_group_jura_settings        
     on_press:
-      - uart.write: [0xFB, 0xDF, 0xDB, 0xDF]  ## 'F'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xDB, 0xDB, 0xDF]  ## 'A'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xFF, 0xDB]  ## ':'
-      - delay: 8ms
-      - uart.write: [0xDB, 0xDB, 0xFF, 0xDB]  ## '0'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xDF, 0xFF, 0xDB]  ## '5'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xFF, 0xDB, 0xDB]  ## '\r'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xDB, 0xDB]  ## '\n'
+      - script.execute: 
+          id: send_string
+          command: 'FA:05'
 
 ###########################  PRODUCTS  ###############################
 
@@ -292,147 +254,77 @@ button:
     name: 'Make Risoretto'
     icon: "mdi:coffee-outline"
     id: jura_FA07
-    # web_server:
-    #   sorting_group_id: Coffee_products_menu 
+    web_server:
+      sorting_group_id: Coffee_products_menu 
     on_press:
-      - uart.write: [0xFB, 0xDF, 0xDB, 0xDF]  ## 'F'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xDB, 0xDB, 0xDF]  ## 'A'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xFF, 0xDB]  ## ':'
-      - delay: 8ms
-      - uart.write: [0xDB, 0xDB, 0xFF, 0xDB]  ## '0'
-      - delay: 8ms
-      - uart.write: [0xFF, 0xDF, 0xFF, 0xDB]  ## '7'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xFF, 0xDB, 0xDB]  ## '\r'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xDB, 0xDB]  ## '\n'
+      - script.execute: 
+          id: send_string
+          command: 'FA:07'
 
   - platform: template
     name: 'Make Espresso'
     icon: "mdi:coffee-to-go-outline"
     id: jura_FA08
-    # web_server:
-    #   sorting_group_id: Coffee_products_menu 
+    web_server:
+      sorting_group_id: Coffee_products_menu 
     on_press:
-      - uart.write: [0xFB, 0xDF, 0xDB, 0xDF]  ## 'F'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xDB, 0xDB, 0xDF]  ## 'A'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xFF, 0xDB]  ## ':'
-      - delay: 8ms
-      - uart.write: [0xDB, 0xDB, 0xFF, 0xDB]  ## '0'
-      - delay: 8ms
-      - uart.write: [0xDB, 0xFB, 0xFF, 0xDB]  ## '8'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xFF, 0xDB, 0xDB]  ## '\r'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xDB, 0xDB]  ## '\n'
+      - script.execute: 
+          id: send_string
+          command: 'FA:08'
 
   - platform: template
     name: 'Make Coffee'
     icon: "mdi:coffee-outline"
     id: jura_FA09
-    # web_server:
-    #   sorting_group_id: Coffee_products_menu 
+    web_server:
+      sorting_group_id: Coffee_products_menu 
     on_press:
-      - uart.write: [0xFB, 0xDF, 0xDB, 0xDF]  ## 'F'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xDB, 0xDB, 0xDF]  ## 'A'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xFF, 0xDB]  ## ':'
-      - delay: 8ms
-      - uart.write: [0xDB, 0xDB, 0xFF, 0xDB]  ## '0'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xFB, 0xFF, 0xDB]  ## '9'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xFF, 0xDB, 0xDB]  ## '\r'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xDB, 0xDB]  ## '\n'
+      - script.execute: 
+          id: send_string
+          command: 'FA:09'
 
   - platform: template
     name: 'Make Cappuccino'
     icon: "mdi:glass-mug-variant"
     id: jura_FA0A
-    # web_server:
-    #   sorting_group_id: Coffee_products_menu 
+    web_server:
+      sorting_group_id: Coffee_products_menu 
     on_press:
-      - uart.write: [0xFB, 0xDF, 0xDB, 0xDF]  ## 'F'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xDB, 0xDB, 0xDF]  ## 'A'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xFF, 0xDB]  ## ':'
-      - delay: 8ms
-      - uart.write: [0xDB, 0xDB, 0xFF, 0xDB]  ## '0'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xDB, 0xDB, 0xDF]  ## 'A'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xFF, 0xDB, 0xDB]  ## '\r'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xDB, 0xDB]  ## '\n'
+      - script.execute: 
+          id: send_string
+          command: 'FA:0A'
 
   - platform: template
     name: 'Make Steam'
     icon: "mdi:pot-steam-outline" 
     id: jura_FA0B
-    # web_server:
-    #   sorting_group_id: Coffee_products_menu 
+    web_server:
+      sorting_group_id: Coffee_products_menu 
     on_press:
-      - uart.write: [0xFB, 0xDF, 0xDB, 0xDF]  ## 'F'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xDB, 0xDB, 0xDF]  ## 'A'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xFF, 0xDB]  ## ':'
-      - delay: 8ms
-      - uart.write: [0xDB, 0xDB, 0xFF, 0xDB]  ## '0'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xDB, 0xDB, 0xDF]  ## 'B'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xFF, 0xDB, 0xDB]  ## '\r'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xDB, 0xDB]  ## '\n'
+      - script.execute: 
+          id: send_string
+          command: 'FA:0B'
 
   - platform: template
     name: 'Make hot-water'
     icon: "mdi:tea-outline"
     id: jura_FA0C
-    # web_server:
-    #   sorting_group_id: Coffee_products_menu 
+    web_server:
+      sorting_group_id: Coffee_products_menu 
     on_press:
-      - uart.write: [0xFB, 0xDF, 0xDB, 0xDF]  ## 'F'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xDB, 0xDB, 0xDF]  ## 'A'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xFF, 0xDB]  ## ':'
-      - delay: 8ms
-      - uart.write: [0xDB, 0xDB, 0xFF, 0xDB]  ## '0'
-      - delay: 8ms
-      - uart.write: [0xFF, 0xDB, 0xDB, 0xDF]  ## 'C'
-      - delay: 8ms
-      - uart.write: [0xDF, 0xFF, 0xDB, 0xDB]  ## '\r'
-      - delay: 8ms
-      - uart.write: [0xFB, 0xFB, 0xDB, 0xDB]  ## '\n'
+      - script.execute: 
+          id: send_string
+          command: 'FA:0C'
 
-  # - platform: template
-    # name: 'Type'
-    # id: jura_TY
-    #web_server:
-     # sorting_group_id: Coffee_products_menu 
-    # on_press:
-      # - uart.write: [0xDB, 0xDF, 0xDF, 0xDF]  ## 'T'
-      # - delay: 8ms
-      # - uart.write: [0xDF, 0xFB, 0xDF, 0xDF]  ## 'Y'
-      # - delay: 8ms
-      # - uart.write: [0xFB, 0xFB, 0xFF, 0xDB]  ## ':'
-      # - delay: 8ms
-      # - uart.write: [0xDB, 0xDB, 0xFF, 0xDB]  ## '0'
-      # - delay: 8ms
-      # - uart.write: [0xDB, 0xDB, 0xFF, 0xDB]  ## '0'
-      # - delay: 8ms
-      # - uart.write: [0xDF, 0xFF, 0xDB, 0xDB]  ## '\r'
-      # - delay: 8ms
-      # - uart.write: [0xFB, 0xFB, 0xDB, 0xDB]  ## '\n'
+  - platform: template
+    name: 'Type'
+    id: jura_TY
+    web_server:
+     sorting_group_id: Coffee_products_menu 
+    on_press:
+      - script.execute: 
+          id: send_string
+          command: 'TY:00'
 
 
 ##############################  SENSORS  ############################
@@ -441,8 +333,8 @@ sensor:
 #---------------------- Dallas temperature sensor ----------------------
   - platform: dallas_temp   
     id: temperature1
-    # web_server:
-    #   sorting_group_id: sorting_group_counters 
+    web_server:
+      sorting_group_id: sorting_group_counters 
     address: 0xd901186dcfabff28 
     name: "room temperature"    
     device_class: "temperature"
@@ -493,8 +385,8 @@ sensor:
     filters: 
       - filter_out: nan   
       - skip_initial: 1
-    # web_server:
-    #   sorting_group_id: sorting_group_counters 
+    web_server:
+      sorting_group_id: sorting_group_counters 
 
   - platform: template
     id: num_double_espresso
@@ -505,22 +397,22 @@ sensor:
     filters: 
       - filter_out: nan   
       - skip_initial: 1
-    # web_server:
-    #   sorting_group_id: sorting_group_counters 
+    web_server:
+      sorting_group_id: sorting_group_counters 
       
 
-  - platform: template
-    id: num_coffee
-    name: "Single Coffees Made"
-    accuracy_decimals: 0
-    state_class: total_increasing
-    lambda: "return {};"  
-    filters: 
-      - filter_out: nan    
-      - skip_initial: 1 
-      - lambda: |-
-          id(single_coffee_made_counter) += x;         
-          return x;
+  # - platform: template
+  #   id: num_coffee
+  #   name: "Single Coffees Made"
+  #   accuracy_decimals: 0
+  #   state_class: total_increasing
+  #   lambda: "return {};"  
+  #   filters: 
+  #     - filter_out: nan    
+  #     - skip_initial: 1 
+  #     - lambda: |-
+  #         id(single_coffee_made_counter) += x;         
+  #         return x;
     # web_server:
     #   sorting_group_id: sorting_group_counters  
 
@@ -534,8 +426,8 @@ sensor:
     filters: 
       - filter_out: nan   
       - skip_initial: 1
-    # web_server:
-    #   sorting_group_id: sorting_group_counters 
+    web_server:
+      sorting_group_id: sorting_group_counters 
 
   - platform: template
     id: num_ristretto
@@ -546,8 +438,8 @@ sensor:
     filters:
       - filter_out: nan
       - skip_initial: 1
-    # web_server:
-    #   sorting_group_id: sorting_group_counters 
+    web_server:
+      sorting_group_id: sorting_group_counters 
 
   - platform: template
     id: num_double_ristretto
@@ -558,8 +450,8 @@ sensor:
     filters:
       - filter_out: nan
       - skip_initial: 1
-    # web_server:
-    #   sorting_group_id: sorting_group_counters 
+    web_server:
+      sorting_group_id: sorting_group_counters 
 
   - platform: template
     id: num_single_capuccino
@@ -570,8 +462,8 @@ sensor:
     filters:
       - filter_out: nan
       - skip_initial: 1
-    # web_server:
-    #   sorting_group_id: sorting_group_counters 
+    web_server:
+      sorting_group_id: sorting_group_counters 
 
 
   - platform: template
@@ -583,8 +475,8 @@ sensor:
     filters: 
       - filter_out: nan   
       - skip_initial: 1
-    # web_server:
-    #   sorting_group_id: sorting_group_counters 
+    web_server:
+      sorting_group_id: sorting_group_counters 
 
   - platform: template
     id: num_brewunit_movements
@@ -594,8 +486,8 @@ sensor:
     filters:
       - filter_out: nan
       - skip_initial: 1
-    # web_server:
-    #   sorting_group_id: sorting_group_counters 
+    web_server:
+      sorting_group_id: sorting_group_counters 
 
   - platform: template
     id: num_descaling
@@ -605,24 +497,24 @@ sensor:
     filters:
       - filter_out: nan
       - skip_initial: 1
-    # web_server:
-    #   sorting_group_id: sorting_group_counters 
-  - platform: template
-    id: num_coffee_Grounds 
-    update_interval: 2min
-    accuracy_decimals: 0
-    state_class: total_increasing   
-    name: "Coffee grounds in tray"
-    lambda: |-
-      return (id(num_coffee).state);
-    filters: 
-      - filter_out: nan   
-      - skip_initial: 1
-      - lambda: |-
-          if (x > 20) {
-            return NAN;  // filter out the values greater than 20, Jura F7 gives warning at 16
-          }
-          return x;
+    web_server:
+      sorting_group_id: sorting_group_counters 
+  # - platform: template
+  #   id: num_coffee_Grounds 
+  #   update_interval: 2min
+  #   accuracy_decimals: 0
+  #   state_class: total_increasing   
+  #   name: "Coffee grounds in tray"
+  #   lambda: |-
+  #     return (id(num_coffee).state);
+  #   filters: 
+  #     - filter_out: nan   
+  #     - skip_initial: 1
+  #     - lambda: |-
+  #         if (x > 20) {
+  #           return NAN;  // filter out the values greater than 20, Jura F7 gives warning at 16
+  #         }
+  #         return x;
     # web_server:
     #   sorting_group_id: sorting_group_counters 
 
@@ -666,15 +558,15 @@ text_sensor:
     id: tray_status
     name: "Tray Status"
     lambda: "return {};"
-    # web_server:
-    #   sorting_group_id: sorting_group_jura_settings     
+    web_server:
+      sorting_group_id: sorting_group_jura_settings     
     
   - platform: template
     id: tank_status
     name: "Water Tank Status"
     lambda: "return {};"
-    # web_server:
-    #   sorting_group_id: sorting_group_jura_settings 
+    web_server:
+      sorting_group_id: sorting_group_jura_settings 
   
 
 binary_sensor:
@@ -684,25 +576,25 @@ binary_sensor:
 
 #------------------custom componente for Jura Coffee decoding ----------------------
 
-# The order of sensors must align with the order in the JuraCoffee constructor @ jura_coffee.h
-custom_component:
-  - id: jura_coffee
-    lambda: !lambda |-
-      auto my_jura = new JuraCoffee(
-          id(uart_bus),
-          id(num_single_espresso),
-          id(num_double_espresso),
-          id(num_coffee),
-          id(num_double_coffee),
-          id(num_ristretto),
-          id(num_single_capuccino),
-          id(num_double_ristretto),        
-          id(num_brewunit_movements),
-          id(num_clean),
-          id(num_descaling),
-          id(num_coffee_Grounds),
-          id(tray_status),          
-          id(tank_status)
-      );
-      return {my_jura};
+# # The order of sensors must align with the order in the JuraCoffee constructor @ jura_coffee.h
+# custom_component:
+#   - id: jura_coffee
+#     lambda: !lambda |-
+#       auto my_jura = new JuraCoffee(
+#           id(uart_bus),
+#           id(num_single_espresso),
+#           id(num_double_espresso),
+#           id(num_coffee),
+#           id(num_double_coffee),
+#           id(num_ristretto),
+#           id(num_single_capuccino),
+#           id(num_double_ristretto),        
+#           id(num_brewunit_movements),
+#           id(num_clean),
+#           id(num_descaling),
+#           id(num_coffee_Grounds),
+#           id(tray_status),          
+#           id(tank_status)
+#       );
+#       return {my_jura};
 

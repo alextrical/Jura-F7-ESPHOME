@@ -40,3 +40,7 @@ ENV/
 env/
 env.bak/
 venv.bak/
+
+
+.esphome
+secrets.yaml
