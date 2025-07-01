@@ -42,7 +42,7 @@ jobs:
     - name: Build project (ESPHome C++ code)
       if: matrix.language == 'cpp'
       run: |
-        esphome compile your_config.yaml
+        esphome compile jura-01.yaml
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
